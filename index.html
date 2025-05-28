@@ -6,6 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Статусы пользователей</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
   <style>
     input[type=number]::-webkit-outer-spin-button,
     input[type=number]::-webkit-inner-spin-button {
@@ -20,6 +21,13 @@
       min-width: 4ch;
       text-align: right;
     }
+    .fade-in {
+      animation: fadeIn 0.4s ease-in-out;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(5px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
   </style>
 </head>
 
@@ -27,7 +35,7 @@
   <div class="max-w-3xl mx-auto py-10 px-4">
     <h2 class="text-2xl font-bold mb-4">Пользователи</h2>
 
-    <div id="loadingIndicator" class="text-sm text-blue-600 mb-2 hidden">⏳ Загружается…</div>
+    <div id="loadingIndicator" class="text-sm text-blue-600 mb-2 hidden fade-in">⏳ Загружается…</div>
 
     <div class="flex flex-wrap items-center gap-4 mb-4">
       <label class="flex items-center gap-2">
@@ -38,33 +46,37 @@
           <option value="off">Только OFF</option>
         </select>
       </label>
-      <button id="onAll" class="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded text-sm">Включить всех</button>
-      <button id="offAll" class="bg-pink-500 hover:bg-pink-600 text-white px-3 py-1 rounded text-sm">Выключить всех</button>
+      <button id="onAll" class="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded text-sm transition-all">
+        <i class="fa-solid fa-toggle-on mr-1"></i> Включить всех
+      </button>
+      <button id="offAll" class="bg-pink-500 hover:bg-pink-600 text-white px-3 py-1 rounded text-sm transition-all">
+        <i class="fa-solid fa-toggle-off mr-1"></i> Выключить всех
+      </button>
     </div>
 
-    <div class="w-full overflow-x-auto">
-      <table class="w-full text-sm border border-gray-300 table-fixed">
+    <div class="w-full overflow-x-auto hidden sm:block fade-in">
+      <table class="w-full text-sm border border-gray-300">
         <thead class="bg-gray-100">
           <tr class="leading-tight">
-            <th class="border px-2 py-0.5 text-left w-8">№</th>
-            <th class="border px-2 py-0.5 text-left cursor-pointer w-1/4" onclick="setSort('username')">
-              Имя <span id="sortIcon-username" class="inline-block"></span>
-            </th>
-            <th class="border px-2 py-0.5 text-left w-20">Статус</th>
-            <th class="border px-2 py-0.5 text-left cursor-pointer w-28" onclick="setSort('subscribers')">
-              Подписчиков <span id="sortIcon-subscribers" class="inline-block"></span>
-            </th>
-            <th class="border px-2 py-0.5 text-left w-20">Удалить</th>
+            <th class="border px-2 py-1 text-left">№</th>
+            <th class="border px-2 py-1 text-left">Имя</th>
+            <th class="border px-2 py-1 text-left">Статус</th>
+            <th class="border px-2 py-1 text-left">Подписчиков</th>
+            <th class="border px-2 py-1 text-left">Удалить</th>
           </tr>
         </thead>
         <tbody id="userTableBody"></tbody>
       </table>
     </div>
 
+    <div id="mobileCards" class="sm:hidden flex flex-col gap-4 fade-in"></div>
+
     <h3 class="text-xl font-semibold mt-8 mb-2">Добавить нового</h3>
-    <form id="addForm" class="flex flex-col sm:flex-row gap-2">
+    <form id="addForm" class="flex flex-col sm:flex-row gap-2 fade-in">
       <input name="username" placeholder="Имя" required class="border px-3 py-1 rounded w-full sm:w-auto flex-1" />
-      <button class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-1 rounded">Добавить</button>
+      <button class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-1 rounded transition-all">
+        <i class="fa-solid fa-user-plus mr-2"></i> Добавить
+      </button>
     </form>
   </div>
 
@@ -75,50 +87,14 @@
     const toChecked = s => s === 'on';
     const toStatus = c => c ? 'on' : 'off';
     let usersCache = [];
-    let sortKey = 'username';
-    let sortAsc = true;
-
-    function setSort(key) {
-      if (sortKey === key) {
-        sortAsc = !sortAsc;
-      } else {
-        sortKey = key;
-        sortAsc = true;
-      }
-      updateSortIcons();
-      render();
-    }
-
-    function updateSortIcons() {
-      const fields = ['username', 'subscribers'];
-      fields.forEach(f => {
-        const icon = document.getElementById(`sortIcon-${f}`);
-        if (icon) icon.textContent = (sortKey === f) ? (sortAsc ? '▲' : '▼') : '';
-      });
-    }
-
-    function showLoading(show = true) {
-      document.getElementById('loadingIndicator').classList.toggle('hidden', !show);
-    }
-
-    function req(method, body) {
-      showLoading(true);
-      return fetch(API, {
-        method,
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': AUTH
-        },
-        body: body ? JSON.stringify(body) : undefined
-      }).finally(() => showLoading(false));
-    }
 
     async function load() {
-      showLoading(true);
-      usersCache = await req('GET').then(r => r.json());
-      updateSortIcons();
+      document.getElementById('loadingIndicator').classList.remove('hidden');
+      usersCache = await fetch(API, {
+        headers: { Authorization: AUTH }
+      }).then(r => r.json());
       render();
-      showLoading(false);
+      document.getElementById('loadingIndicator').classList.add('hidden');
     }
 
     function formatSubs(val) {
@@ -130,78 +106,133 @@
     function render() {
       const filter = document.getElementById('filterSel').value;
       const tableBody = document.getElementById('userTableBody');
+      const mobileCards = document.getElementById('mobileCards');
+
       tableBody.innerHTML = '';
+      mobileCards.innerHTML = '';
 
-      const filtered = [...usersCache]
-        .filter(u => filter === 'all' || u.status === filter);
+      const filtered = [...usersCache].filter(u => filter === 'all' || u.status === filter);
 
-      const sorted = filtered.sort((a, b) => {
-        if (sortKey === 'username') {
-          return sortAsc
-            ? a.username.localeCompare(b.username, 'ru')
-            : b.username.localeCompare(a.username, 'ru');
-        }
-        if (sortKey === 'subscribers') {
-          return sortAsc
-            ? (a.subscribers || 0) - (b.subscribers || 0)
-            : (b.subscribers || 0) - (a.subscribers || 0);
-        }
-        return 0;
-      });
-
-      sorted.forEach((u, index) => {
+      filtered.forEach((u, index) => {
         const tr = document.createElement('tr');
-        tr.className = u.status === 'on' ? 'bg-green-50' : 'bg-pink-50';
+        tr.className = u.status === 'on' ? 'bg-green-50 fade-in' : 'bg-pink-50 fade-in';
+        tr.innerHTML = `
+          <td class="border px-2 py-1">${index + 1}</td>
+          <td class="border px-2 py-1">${u.username}</td>
+          <td class="border px-2 py-1 text-center">
+            <input type="checkbox" ${toChecked(u.status) ? 'checked' : ''}>
+          </td>
+          <td class="border px-2 py-1 text-right">
+            <input type="text" value="${formatSubs(u.subscribers || 0)}" class="subs-input border rounded px-2 py-1 text-right" inputmode="numeric">
+          </td>
+          <td class="border px-2 py-1 text-center">
+            <button class="text-red-600 hover:text-red-800"><i class="fa-solid fa-trash"></i></button>
+          </td>`;
+        tableBody.appendChild(tr);
 
-        const tdIndex = `<td class="border px-2 py-0.5">${index + 1}</td>`;
-        const tdName = `<td class="border px-2 py-0.5">${u.username}</td>`;
-        const tdStatus = `<td class="border px-2 py-0.5"><label class="flex items-center gap-2"><input type="checkbox" ${toChecked(u.status) ? 'checked' : ''} class="scale-125"></label></td>`;
-        const tdSubs = `<td class="border px-2 py-0.5">
-          <input type="text" value="${formatSubs(u.subscribers || 0)}" class="subs-input border rounded px-2 py-1" inputmode="numeric" pattern="[0-9]*">
-        </td>`;
-        const tdDelete = `<td class="border px-2 py-0.5"><button class="text-red-600 hover:bg-red-100 rounded px-2 py-0.5">🗑</button></td>`;
-
-        tr.innerHTML = tdIndex + tdName + tdStatus + tdSubs + tdDelete;
+        const card = document.createElement('div');
+        card.className = `rounded border px-4 py-3 text-sm ${u.status === 'on' ? 'bg-green-50' : 'bg-pink-50'} fade-in`;
+        card.innerHTML = `
+          <div class="font-medium flex justify-between items-center">
+            <span>${u.username}</span>
+            <button class="text-red-600"><i class="fa-solid fa-trash"></i></button>
+          </div>
+          <div class="flex items-center justify-between mt-2 gap-3">
+            <label class="flex items-center gap-2">
+              <i class="fa-solid fa-toggle-${toChecked(u.status) ? 'on' : 'off'} text-lg"></i>
+              <input type="checkbox" ${toChecked(u.status) ? 'checked' : ''}>
+            </label>
+            <label class="flex items-center gap-2">
+              <i class="fa-solid fa-user-group"></i>
+              <input type="text" value="${formatSubs(u.subscribers || 0)}" class="subs-input border rounded px-2 py-1 w-20 text-right" inputmode="numeric">
+            </label>
+          </div>`;
+        mobileCards.appendChild(card);
 
         const checkbox = tr.querySelector('input[type="checkbox"]');
-        checkbox.onchange = e =>
-          req('PATCH', { id: u.id, status: toStatus(e.target.checked) }).then(load);
+        checkbox.onchange = e => updateStatus(u.id, e.target.checked);
 
-        const subsInput = tr.querySelector('input[type="text"]');
-        subsInput.onfocus = () => subsInput.value = u.subscribers || 0;
-        subsInput.onblur = e => {
-          const val = parseInt(e.target.value.replace(/[^\d]/g, '')) || 0;
-          req('PATCH', { id: u.id, subscribers: val }).then(load);
-        };
+        const mobileCheckbox = card.querySelector('input[type="checkbox"]');
+        mobileCheckbox.onchange = e => updateStatus(u.id, e.target.checked);
 
-        const deleteBtn = tr.querySelector('button');
-        deleteBtn.onclick = () => {
-          if (confirm(`Удалить пользователя ${u.username}?`)) {
-            req('PATCH', { delete: true, id: u.id }).then(load);
-          }
-        };
+        const subInput = tr.querySelector('input[type="text"]');
+        subInput.onfocus = () => subInput.value = u.subscribers || 0;
+        subInput.onblur = e => updateSubs(u.id, e);
 
-        tableBody.appendChild(tr);
+        const mobileSub = card.querySelector('input[type="text"]');
+        mobileSub.onfocus = () => mobileSub.value = u.subscribers || 0;
+        mobileSub.onblur = e => updateSubs(u.id, e);
+
+        tr.querySelector('button').onclick = () => remove(u.id, u.username);
+        card.querySelector('button').onclick = () => remove(u.id, u.username);
       });
+    }
+
+    function updateStatus(id, state) {
+      fetch(API, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': AUTH
+        },
+        body: JSON.stringify({ id, status: state ? 'on' : 'off' })
+      }).then(load);
+    }
+
+    function updateSubs(id, e) {
+      const val = parseInt(e.target.value.replace(/[^\d]/g, '')) || 0;
+      fetch(API, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': AUTH
+        },
+        body: JSON.stringify({ id, subscribers: val })
+      }).then(load);
+    }
+
+    function remove(id, name) {
+      if (!confirm(`Удалить ${name}?`)) return;
+      fetch(API, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': AUTH
+        },
+        body: JSON.stringify({ id, delete: true })
+      }).then(load);
     }
 
     document.getElementById('addForm').onsubmit = async e => {
       e.preventDefault();
       const username = e.target.username.value.trim();
       if (!username) return;
-      await req('POST', { username });
+      await fetch(API, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': AUTH
+        },
+        body: JSON.stringify({ username })
+      });
       e.target.reset();
       load();
     };
 
     document.getElementById('filterSel').onchange = render;
-    document.getElementById('onAll').onclick = () => massUpdate('on', 'Включить всех?');
-    document.getElementById('offAll').onclick = () => massUpdate('off', 'Выключить всех?');
+    document.getElementById('onAll').onclick = () => massUpdate('on');
+    document.getElementById('offAll').onclick = () => massUpdate('off');
 
-    async function massUpdate(state, msg) {
-      if (!confirm(msg)) return;
-      await req('PATCH', { all: true, status: state });
-      load();
+    function massUpdate(state) {
+      if (!confirm(`Подтвердите массовое обновление: ${state.toUpperCase()}`)) return;
+      fetch(API, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': AUTH
+        },
+        body: JSON.stringify({ all: true, status: state })
+      }).then(load);
     }
 
     load();
