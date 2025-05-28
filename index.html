@@ -165,7 +165,7 @@
         .filter(u => filter === 'all' || u.status === filter)
         .forEach((u, i) => {
           const tr = document.createElement('tr');
-          tr.className = 'fade-in';
+          tr.className = `fade-in`;
           tr.innerHTML = `
             <td class="border px-2 py-1">${i + 1}</td>
             <td class="border px-2 py-1">
@@ -173,11 +173,17 @@
                 <i class="fa-brands fa-instagram mr-1"></i>${u.username}
               </a>
             </td>
-            <td class="border px-2 py-1">
-              <input type="checkbox" ${u.status === 'on' ? 'checked' : ''}>
+            <td class="border px-2 py-1 bg-green-100/40" style="background-color: ${u.status === 'on' ? '#dcfce7cc' : '#fce7f3cc'}">
+              <label class="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" ${u.status === 'on' ? 'checked' : ''} class="sr-only peer">
+                <div class="w-14 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-500 rounded-full peer peer-checked:bg-blue-600 relative after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full">
+                  <span class="absolute left-1 text-xs top-1 text-gray-500 peer-checked:hidden">OFF</span>
+                  <span class="absolute right-1 text-xs top-1 text-white hidden peer-checked:inline">ON</span>
+                </div>
+              </label>
             </td>
             <td class="border px-2 py-1">
-              <input type="number" class="subs-input border rounded px-1" value="${u.subscribers || 0}" onfocus="this.select()">
+              <input type="text" class="subs-input border rounded px-1 text-right" value="${formatNumber(u.subscribers || 0)}" onfocus="this.value = ${u.subscribers || 0}; this.select()">
             </td>
             <td class="border px-2 py-1 text-center">
               <button class="text-red-600 hover:text-red-800">
@@ -191,13 +197,16 @@
           tableBody.appendChild(tr);
 
           const card = document.createElement('div');
-          card.className = 'bg-white border rounded shadow p-3 fade-in';
+          card.className = `${u.status === 'on' ? 'bg-green-50' : 'bg-pink-50'} border rounded shadow p-3 fade-in`;
           card.innerHTML = `
             <div class="flex justify-between items-center">
               <a href="https://www.instagram.com/${u.username}/" target="_blank" title="Открыть профиль в Instagram" class="font-medium text-blue-600 hover:underline">
                 <i class="fa-brands fa-instagram mr-1"></i>${u.username}
               </a>
-              <input type="checkbox" ${u.status === 'on' ? 'checked' : ''}>
+              <label class="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" ${u.status === 'on' ? 'checked' : ''} class="sr-only peer">
+                <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-500 rounded-full peer peer-checked:bg-blue-600 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full"></div>
+              </label>
             </div>
             <div class="mt-2 flex justify-between items-center">
               <input type="number" class="subs-input w-24 border rounded px-2 py-1" value="${u.subscribers || 0}">
