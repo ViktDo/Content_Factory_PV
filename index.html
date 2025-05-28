@@ -1,171 +1,111 @@
 <!DOCTYPE html>
 <html lang="ru">
-
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Статусы пользователей</title>
+  <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
+  <script>
+    function formatNumber(n) {
+      n = parseInt(n) || 0;
+      if (n >= 1_000_000) return (n / 1_000_000).toFixed(1).replace(/\.0$/, '') + 'M';
+      if (n >= 1_000) return (n / 1_000).toFixed(1).replace(/\.0$/, '') + 'K';
+      return n.toString();
+    }
+  </script>
   <script src="https://cdn.tailwindcss.com"></script>
-  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
   <style>
-    input[type=number]::-webkit-outer-spin-button,
-    input[type=number]::-webkit-inner-spin-button {
-      -webkit-appearance: none;
-      margin: 0;
-    }
-    input[type=number] {
-      -moz-appearance: textfield;
-    }
-    .subs-input {
-      width: 100%;
-      min-width: 4ch;
-      text-align: right;
-    }
     .fade-in {
-      animation: fadeIn 0.4s ease-in-out;
+      animation: fadeIn 0.3s ease-in;
     }
     @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(5px); }
+      from { opacity: 0; transform: translateY(8px); }
       to { opacity: 1; transform: translateY(0); }
-    }
-    #progress-bar {
-      height: 4px;
-      background: linear-gradient(to right, #3b82f6 0%, #2563eb 100%);
-      width: 0;
-      transition: width 0.3s ease;
     }
   </style>
 </head>
+<body class="bg-gray-50 p-4 text-sm text-gray-800">
 
-<body class="bg-gray-50 text-gray-900">
-  <div class="max-w-3xl mx-auto py-0 px-4">
-    <h2 class="text-2xl font-bold mb-4 pt-10">Пользователи</h2>
+  <div class="max-w-4xl mx-auto space-y-6">
+    <h2 class="text-xl font-bold">Пользователи</h2>
 
-    <div class="relative h-1 mb-2">
-      <div id="progress-bar" class="absolute top-0 left-0"></div>
-    </div>
-
-    <div class="flex flex-wrap items-center gap-4 mb-4">
-      <label class="flex items-center gap-2">
-        <span class="text-sm font-medium">Показать:</span>
-        <select id="filterSel" class="border rounded px-2 py-1 text-sm">
+    <div class="flex flex-wrap gap-2 items-center">
+      <label>Показать:
+        <select id="filterSel" class="border rounded px-2 py-1">
           <option value="all">Всех</option>
           <option value="on">Только ON</option>
           <option value="off">Только OFF</option>
         </select>
       </label>
-      <button id="onAll" class="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded text-sm transition-all">
-        <i class="fa-solid fa-toggle-on mr-1"></i> Включить всех
-      </button>
-      <button id="offAll" class="bg-pink-500 hover:bg-pink-600 text-white px-3 py-1 rounded text-sm transition-all">
-        <i class="fa-solid fa-toggle-off mr-1"></i> Выключить всех
-      </button>
+      <button id="onAll" class="bg-green-100 hover:bg-green-200 text-green-700 px-3 py-1 rounded">Включить всех</button>
+      <button id="offAll" class="bg-pink-100 hover:bg-pink-200 text-pink-700 px-3 py-1 rounded">Выключить всех</button>
     </div>
 
-    <div class="w-full overflow-x-auto hidden sm:block fade-in">
-      <table class="w-full text-sm border border-gray-300">
-        <thead class="bg-gray-100">
-          <tr class="leading-tight">
-            <th class="border px-2 py-1 text-left">№</th>
-            <th class="border px-2 py-1 text-left">Имя</th>
-            <th class="border px-2 py-1 text-left">Статус</th>
-            <th class="border px-2 py-1 text-left">Подписчиков</th>
-            <th class="border px-2 py-1 text-left">Удалить</th>
-          </tr>
-        </thead>
-        <tbody id="userTableBody"></tbody>
-      </table>
-    </div>
+    <div id="container"></div>
 
-    <div id="mobileCards" class="sm:hidden flex flex-col gap-4 fade-in"></div>
-
-    <h3 class="text-xl font-semibold mt-8 mb-2">Добавить нового</h3>
-    <form id="addForm" class="flex flex-col sm:flex-row gap-2 fade-in">
-      <input name="username" placeholder="Имя" required class="border px-3 py-1 rounded w-full sm:w-auto flex-1" />
-      <input name="subscribers" placeholder="Подписчиков" type="number" min="0" class="border px-3 py-1 rounded w-full sm:w-auto flex-1" />
-      <button class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-1 rounded transition-all">
-        <i class="fa-solid fa-user-plus mr-2"></i> Добавить
-      </button>
+    <form id="addForm" class="flex flex-col sm:flex-row gap-2 items-start sm:items-end">
+      <div class="flex flex-col gap-1 flex-1">
+        <label class="text-sm">Имя пользователя</label>
+        <input name="username" placeholder="Имя" required class="border px-3 py-1 rounded w-full sm:w-auto flex-1" />
+      </div>
+      <div class="flex flex-col gap-1 w-40">
+        <label class="text-sm">Подписчики</label>
+        <input name="subscribers" placeholder="Подписчиков" type="number" min="0" class="border px-3 py-1 rounded w-full sm:w-auto flex-1" />
+      </div>
+      <button class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded">Добавить</button>
     </form>
   </div>
 
   <script>
     const API = 'https://n8n-pashavin.ru/webhook/authors';
     const AUTH = 'Basic ' + btoa('pashavincontentfabric:FW8-5ca-CEZ-8fa');
+    const toStatus = c => c ? 'on' : 'off';
 
-    const progressBar = document.getElementById('progress-bar');
     let usersCache = [];
 
-    function startProgress() {
-      progressBar.style.width = '70%';
-    }
-
-    function completeProgress() {
-      progressBar.style.width = '100%';
-      setTimeout(() => progressBar.style.width = '0%', 300);
+    function req(method, body) {
+      return fetch(API, {
+        method,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': AUTH
+        },
+        body: body ? JSON.stringify(body) : undefined
+      });
     }
 
     async function load() {
-      startProgress();
-      usersCache = await fetch(API, { headers: { Authorization: AUTH } }).then(r => r.json());
+      usersCache = await req('GET').then(r => r.json());
       render();
-      completeProgress();
-    }
-
-    function formatNumber(n) {
-      if (n >= 1_000_000) return (n / 1_000_000).toFixed(1).replace('.0', '') + 'М';
-      if (n >= 1_000) return (n / 1_000).toFixed(1).replace('.0', '') + 'К';
-      return n;
-    }
-
-    function updateSubs(id, value) {
-      startProgress();
-      fetch(API, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': AUTH
-        },
-        body: JSON.stringify({ id, subscribers: value })
-      }).then(load);
-    }
-
-    function toggleStatus(id, status) {
-      startProgress();
-      fetch(API, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': AUTH
-        },
-        body: JSON.stringify({ id, status })
-      }).then(load);
-    }
-
-    function removeUser(id) {
-      if (!confirm('Удалить пользователя?')) return;
-      startProgress();
-      fetch(API, {
-        method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': AUTH
-        },
-        body: JSON.stringify({ id })
-      }).then(load);
     }
 
     function render() {
       const filter = document.getElementById('filterSel').value;
-      const tableBody = document.getElementById('userTableBody');
-      const mobileCards = document.getElementById('mobileCards');
-      tableBody.innerHTML = '';
-      mobileCards.innerHTML = '';
-      usersCache
-        .filter(u => filter === 'all' || u.status === filter)
-        .forEach((u, i) => {
+      const container = document.getElementById('container');
+      container.innerHTML = '';
+
+      const isMobile = window.innerWidth < 768;
+      const filtered = usersCache.filter(u => filter === 'all' || u.status === filter);
+
+      if (!isMobile) {
+        const table = document.createElement('table');
+        table.className = 'table-auto border w-full mt-4';
+        table.innerHTML = `
+          <thead><tr class="bg-gray-100">
+            <th class="border px-2 py-1 text-left">#</th>
+            <th class="border px-2 py-1 text-left">Имя</th>
+            <th class="border px-2 py-1 text-left">Подписчики</th>
+            <th class="border px-2 py-1 text-left">Статус</th>
+            <th class="border px-2 py-1 text-left">Удалить</th>
+          </tr></thead>
+          <tbody></tbody>
+        `;
+        container.appendChild(table);
+        const tbody = table.querySelector('tbody');
+
+        filtered.forEach((u, i) => {
           const tr = document.createElement('tr');
-          tr.className = `fade-in`;
+          tr.className = 'fade-in';
+
           tr.innerHTML = `
             <td class="border px-2 py-1">${i + 1}</td>
             <td class="border px-2 py-1">
@@ -173,53 +113,79 @@
                 <i class="fa-brands fa-instagram mr-1"></i>${u.username}
               </a>
             </td>
-            <td class="border px-2 py-1 bg-green-100/40" style="background-color: ${u.status === 'on' ? '#dcfce7cc' : '#fce7f3cc'}">
-              <label class="relative inline-flex items-center cursor-pointer">
-                <input type="checkbox" ${u.status === 'on' ? 'checked' : ''} class="sr-only peer">
-                <div class="w-14 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-500 rounded-full peer peer-checked:bg-blue-600 relative after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full">
-                  <span class="absolute left-1 text-xs top-1 text-gray-500 peer-checked:hidden">OFF</span>
-                  <span class="absolute right-1 text-xs top-1 text-white hidden peer-checked:inline">ON</span>
-                </div>
-              </label>
-            </td>
             <td class="border px-2 py-1">
-              <input type="text" class="subs-input border rounded px-1 text-right" value="${formatNumber(u.subscribers || 0)}" onfocus="this.value = ${u.subscribers || 0}; this.select()">
+              <input type="text" class="subs-input border rounded px-1 text-right w-20"
+                value="${formatNumber(u.subscribers || 0)}"
+                onfocus="this.value = (this.dataset.raw || 0); this.select();"
+                onblur="this.dataset.raw = this.value; this.value = formatNumber(this.value);"
+                data-raw="${u.subscribers || 0}"
+                onchange="updateSubs(${u.id}, this.value)"
+              >
+            </td>
+            <td class="border px-2 py-1" style="background-color: ${u.status === 'on' ? '#dcfce7cc' : '#fce7f3cc'}">
+              ${switchHTML(u)}
             </td>
             <td class="border px-2 py-1 text-center">
-              <button class="text-red-600 hover:text-red-800">
-                <i class="fa-solid fa-trash"></i>
-              </button>
+              <button onclick="removeUser(${u.id})" class="text-red-500 hover:text-red-700">🗑</button>
             </td>
           `;
-          tr.querySelector('input[type=checkbox]').onchange = e => toggleStatus(u.id, e.target.checked ? 'on' : 'off');
-          tr.querySelector('input[type=number]').onchange = e => updateSubs(u.id, parseInt(e.target.value));
-          tr.querySelector('button').onclick = () => removeUser(u.id);
-          tableBody.appendChild(tr);
-
+          tbody.appendChild(tr);
+        });
+      } else {
+        filtered.forEach(u => {
           const card = document.createElement('div');
-          card.className = `${u.status === 'on' ? 'bg-green-50' : 'bg-pink-50'} border rounded shadow p-3 fade-in`;
+          card.className = `border rounded shadow p-3 fade-in ${u.status === 'on' ? 'bg-green-50' : 'bg-pink-50'}`;
+
           card.innerHTML = `
-            <div class="flex justify-between items-center">
-              <a href="https://www.instagram.com/${u.username}/" target="_blank" title="Открыть профиль в Instagram" class="font-medium text-blue-600 hover:underline">
+            <div class="font-semibold text-base mb-1">
+              <a href="https://www.instagram.com/${u.username}/" target="_blank" title="Открыть профиль в Instagram" class="text-blue-600 hover:underline">
                 <i class="fa-brands fa-instagram mr-1"></i>${u.username}
               </a>
-              <label class="relative inline-flex items-center cursor-pointer">
-                <input type="checkbox" ${u.status === 'on' ? 'checked' : ''} class="sr-only peer">
-                <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-500 rounded-full peer peer-checked:bg-blue-600 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full"></div>
-              </label>
             </div>
-            <div class="mt-2 flex justify-between items-center">
-              <input type="number" class="subs-input w-24 border rounded px-2 py-1" value="${u.subscribers || 0}">
-              <button class="text-red-600 hover:text-red-800">
-                <i class="fa-solid fa-trash"></i>
-              </button>
+            <div class="flex items-center gap-2 mb-1">
+              <span class="text-sm font-medium">Подписчики:</span>
+              <input type="text" class="subs-input border rounded px-1 text-right w-20"
+                value="${formatNumber(u.subscribers || 0)}"
+                onfocus="this.value = (this.dataset.raw || 0); this.select();"
+                onblur="this.dataset.raw = this.value; this.value = formatNumber(this.value);"
+                data-raw="${u.subscribers || 0}"
+                onchange="updateSubs(${u.id}, this.value)"
+              >
+            </div>
+            <div class="flex items-center justify-between">
+              ${switchHTML(u)}
+              <button onclick="removeUser(${u.id})" class="text-red-500 hover:text-red-700 text-sm">Удалить</button>
             </div>
           `;
-          card.querySelector('input[type=checkbox]').onchange = e => toggleStatus(u.id, e.target.checked ? 'on' : 'off');
-          card.querySelector('input[type=number]').onchange = e => updateSubs(u.id, parseInt(e.target.value));
-          card.querySelector('button').onclick = () => removeUser(u.id);
-          mobileCards.appendChild(card);
+          container.appendChild(card);
         });
+      }
+    }
+
+    function switchHTML(u) {
+      return `
+        <label class="relative inline-flex items-center cursor-pointer">
+          <input type="checkbox" ${u.status === 'on' ? 'checked' : ''} class="sr-only peer" onchange="toggleStatus(${u.id}, this.checked)">
+          <div class="w-14 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-500 rounded-full peer peer-checked:bg-blue-600 relative after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full">
+            <span class="absolute left-1 text-xs top-1 text-gray-500 peer-checked:hidden">OFF</span>
+            <span class="absolute right-1 text-xs top-1 text-white hidden peer-checked:inline">ON</span>
+          </div>
+        </label>
+      `;
+    }
+
+    function toggleStatus(id, checked) {
+      req('PATCH', { id, status: toStatus(checked) }).then(load);
+    }
+
+    function removeUser(id) {
+      if (confirm('Удалить пользователя?')) {
+        req('PATCH', { delete: true, id }).then(load);
+      }
+    }
+
+    function updateSubs(id, value) {
+      req('PATCH', { id, subscribers: parseInt(value) || 0 });
     }
 
     document.getElementById('addForm').onsubmit = async e => {
@@ -227,15 +193,7 @@
       const username = e.target.username.value.trim();
       const subscribers = parseInt(e.target.subscribers.value.trim()) || 0;
       if (!username) return;
-      startProgress();
-      await fetch(API, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': AUTH
-        },
-        body: JSON.stringify({ username, subscribers })
-      });
+      await req('POST', { username, subscribers });
       e.target.reset();
       load();
     };
@@ -244,21 +202,13 @@
     document.getElementById('onAll').onclick = () => massUpdate('on', 'Включить всех?');
     document.getElementById('offAll').onclick = () => massUpdate('off', 'Выключить всех?');
 
-    function massUpdate(state, msg) {
+    async function massUpdate(state, msg) {
       if (!confirm(msg)) return;
-      startProgress();
-      fetch(API, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': AUTH
-        },
-        body: JSON.stringify({ all: true, status: state })
-      }).then(load);
+      await req('PATCH', { all: true, status: state });
+      load();
     }
 
     load();
   </script>
 </body>
-
 </html>
