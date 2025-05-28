@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+    <meta charset="UTF-8" />
+    <title>Статусы пользователей</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            max-width: 520px;
+            margin: 40px auto;
+        }
+
+        .controls {
+            margin-bottom: 12px;
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        li {
+            margin: 6px 0;
+        }
+    </style>
+</head>
+
+<body>
+
+    <h2>Пользователи</h2>
+
+    <div class="controls">
+        <label>Показать:
+            <select id="filterSel">
+                <option value="all">Всех</option>
+                <option value="on">Только ON</option>
+                <option value="off">Только OFF</option>
+            </select>
+        </label>
+        <button id="onAll">Включить всех</button>
+        <button id="offAll">Выключить всех</button>
+    </div>
+
+    <ul id="list"></ul>
+
+    <h3>Добавить нового</h3>
+    <form id="addForm">
+        <input name="username" placeholder="Имя" required>
+        <button>Добавить</button>
+    </form>
+
+    <script>
+        const API = 'https://<your-n8n-host>/webhook/authors'; // 👈 замени на свой
+        const AUTH = 'Basic ' + btoa('myadmin:s3cret!');        // 👈 логин:пароль
+
+        const toChecked = s => s === 'on';
+        const toStatus = c => c ? 'on' : 'off';
+        let usersCache = [];
+
+        function req(method, body) {
+            return fetch(API, {
+                method,
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': AUTH
+                },
+                body: body ? JSON.stringify(body) : undefined
+            });
+        }
+
+        async function load() {
+            usersCache = await req('GET').then(r => r.json());
+            render();
+        }
+
+        function render() {
+            const filter = document.getElementById('filterSel').value;
+            const list = document.getElementById('list');
+            list.innerHTML = '';
+            usersCache
+                .filter(u => filter === 'all' || u.status === filter)
+                .forEach(u => {
+                    const li = document.createElement('li');
+                    li.innerHTML = `${u.username} <input type="checkbox" ${toChecked(u.status) ? 'checked' : ''}>`;
+                    li.querySelector('input').onchange = e =>
+                        req('PATCH', { id: u.id, status: toStatus(e.target.checked) }).then(load);
+                    list.appendChild(li);
+                });
+        }
+
+        document.getElementById('addForm').onsubmit = async e => {
+            e.preventDefault();
+            const username = e.target.username.value.trim();
+            if (!username) return;
+            await req('POST', { username });
+            e.target.reset();
+            load();
+        };
+
+        document.getElementById('filterSel').onchange = render;
+
+        document.getElementById('onAll').onclick = () => massUpdate('on', 'Включить всех?');
+        document.getElementById('offAll').onclick = () => massUpdate('off', 'Выключить всех?');
+
+        async function massUpdate(state, msg) {
+            if (!confirm(msg)) return;
+            await req('PATCH', { all: true, status: state });
+            load();
+        }
+
+        load();
+    </script>
+</body>
+
+</html>
