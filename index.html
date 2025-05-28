@@ -12,6 +12,8 @@
   <div class="max-w-3xl mx-auto py-10 px-4">
     <h2 class="text-2xl font-bold mb-4">Пользователи</h2>
 
+    <div id="loadingIndicator" class="text-sm text-blue-600 mb-2 hidden">⏳ Загружается…</div>
+
     <div class="flex flex-wrap items-center gap-4 mb-4">
       <label class="flex items-center gap-2">
         <span class="text-sm font-medium">Показать:</span>
@@ -28,11 +30,16 @@
     <div class="overflow-x-auto">
       <table class="w-full text-sm border border-gray-300">
         <thead class="bg-gray-100">
-          <tr>
-            <th class="border px-2 py-1 text-left">#</th>
-            <th class="border px-2 py-1 text-left">Имя</th>
-            <th class="border px-2 py-1 text-left">Статус</th>
-            <th class="border px-2 py-1 text-left">Удалить</th>
+          <tr class="leading-tight">
+            <th class="border px-2 py-0.5 text-left">№</th>
+            <th class="border px-2 py-0.5 text-left cursor-pointer" onclick="setSort('username')">
+              Имя <span id="sortIcon-username" class="inline-block"></span>
+            </th>
+            <th class="border px-2 py-0.5 text-left">Статус</th>
+            <th class="border px-2 py-0.5 text-left cursor-pointer" onclick="setSort('subscribers')">
+              Подписчиков <span id="sortIcon-subscribers" class="inline-block"></span>
+            </th>
+            <th class="border px-2 py-0.5 text-left">Удалить</th>
           </tr>
         </thead>
         <tbody id="userTableBody"></tbody>
@@ -53,8 +60,34 @@
     const toChecked = s => s === 'on';
     const toStatus = c => c ? 'on' : 'off';
     let usersCache = [];
+    let sortKey = 'username';
+    let sortAsc = true;
+
+    function setSort(key) {
+      if (sortKey === key) {
+        sortAsc = !sortAsc;
+      } else {
+        sortKey = key;
+        sortAsc = true;
+      }
+      updateSortIcons();
+      render();
+    }
+
+    function updateSortIcons() {
+      const fields = ['username', 'subscribers'];
+      fields.forEach(f => {
+        const icon = document.getElementById(`sortIcon-${f}`);
+        if (icon) icon.textContent = (sortKey === f) ? (sortAsc ? '▲' : '▼') : '';
+      });
+    }
+
+    function showLoading(show = true) {
+      document.getElementById('loadingIndicator').classList.toggle('hidden', !show);
+    }
 
     function req(method, body) {
+      showLoading(true);
       return fetch(API, {
         method,
         headers: {
@@ -62,12 +95,15 @@
           'Authorization': AUTH
         },
         body: body ? JSON.stringify(body) : undefined
-      });
+      }).finally(() => showLoading(false));
     }
 
     async function load() {
+      showLoading(true);
       usersCache = await req('GET').then(r => r.json());
+      updateSortIcons();
       render();
+      showLoading(false);
     }
 
     function render() {
@@ -75,28 +111,44 @@
       const tableBody = document.getElementById('userTableBody');
       tableBody.innerHTML = '';
 
-      const usersSorted = [...usersCache]
-        .filter(u => filter === 'all' || u.status === filter)
-        .sort((a, b) => a.username.localeCompare(b.username, 'ru'));
+      const filtered = [...usersCache]
+        .filter(u => filter === 'all' || u.status === filter);
 
-      usersSorted.forEach((u, index) => {
+      const sorted = filtered.sort((a, b) => {
+        if (sortKey === 'username') {
+          return sortAsc
+            ? a.username.localeCompare(b.username, 'ru')
+            : b.username.localeCompare(a.username, 'ru');
+        }
+        if (sortKey === 'subscribers') {
+          return sortAsc
+            ? (a.subscribers || 0) - (b.subscribers || 0)
+            : (b.subscribers || 0) - (a.subscribers || 0);
+        }
+        return 0;
+      });
+
+      sorted.forEach((u, index) => {
         const tr = document.createElement('tr');
         tr.className = u.status === 'on' ? 'bg-green-50' : 'bg-pink-50';
 
-        tr.innerHTML = `
-          <td class="border px-2 py-1">${index + 1}</td>
-          <td class="border px-2 py-1">${u.username}</td>
-          <td class="border px-2 py-1">
-            <input type="checkbox" ${toChecked(u.status) ? 'checked' : ''} class="scale-125">
-          </td>
-          <td class="border px-2 py-1">
-            <button class="text-red-600 hover:underline text-sm">Удалить</button>
-          </td>
-        `;
+        const tdIndex = `<td class="border px-2 py-0.5">${index + 1}</td>`;
+        const tdName = `<td class="border px-2 py-0.5">${u.username}</td>`;
+        const tdStatus = `<td class="border px-2 py-0.5"><label class="flex items-center gap-2"><input type="checkbox" ${toChecked(u.status) ? 'checked' : ''} class="scale-125"></label></td>`;
+        const tdSubs = `<td class="border px-2 py-0.5"><input type="number" value="${u.subscribers || 0}" class="border rounded px-2 py-1 w-20"></td>`;
+        const tdDelete = `<td class="border px-2 py-0.5"><button class="text-red-600 hover:bg-red-100 rounded px-2 py-0.5">🗑</button></td>`;
+
+        tr.innerHTML = tdIndex + tdName + tdStatus + tdSubs + tdDelete;
 
         const checkbox = tr.querySelector('input[type="checkbox"]');
         checkbox.onchange = e =>
           req('PATCH', { id: u.id, status: toStatus(e.target.checked) }).then(load);
+
+        const subsInput = tr.querySelector('input[type="number"]');
+        subsInput.onchange = e => {
+          const val = parseInt(e.target.value) || 0;
+          req('PATCH', { id: u.id, subscribers: val }).then(load);
+        };
 
         const deleteBtn = tr.querySelector('button');
         deleteBtn.onclick = () => {
