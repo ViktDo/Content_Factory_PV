@@ -2,113 +2,134 @@
 <html lang="ru">
 
 <head>
-    <meta charset="UTF-8" />
-    <title>Статусы пользователей</title>
-    <style>
-        body {
-            font-family: sans-serif;
-            max-width: 520px;
-            margin: 40px auto;
-        }
-
-        .controls {
-            margin-bottom: 12px;
-            display: flex;
-            gap: 12px;
-            flex-wrap: wrap;
-        }
-
-        li {
-            margin: 6px 0;
-        }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Статусы пользователей</title>
+  <script src="https://cdn.tailwindcss.com"></script>
 </head>
 
-<body>
+<body class="bg-gray-50 text-gray-900">
+  <div class="max-w-3xl mx-auto py-10 px-4">
+    <h2 class="text-2xl font-bold mb-4">Пользователи</h2>
 
-    <h2>Пользователи</h2>
-
-    <div class="controls">
-        <label>Показать:
-            <select id="filterSel">
-                <option value="all">Всех</option>
-                <option value="on">Только ON</option>
-                <option value="off">Только OFF</option>
-            </select>
-        </label>
-        <button id="onAll">Включить всех</button>
-        <button id="offAll">Выключить всех</button>
+    <div class="flex flex-wrap items-center gap-4 mb-4">
+      <label class="flex items-center gap-2">
+        <span class="text-sm font-medium">Показать:</span>
+        <select id="filterSel" class="border rounded px-2 py-1 text-sm">
+          <option value="all">Всех</option>
+          <option value="on">Только ON</option>
+          <option value="off">Только OFF</option>
+        </select>
+      </label>
+      <button id="onAll" class="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded text-sm">Включить всех</button>
+      <button id="offAll" class="bg-pink-500 hover:bg-pink-600 text-white px-3 py-1 rounded text-sm">Выключить всех</button>
     </div>
 
-    <ul id="list"></ul>
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm border border-gray-300">
+        <thead class="bg-gray-100">
+          <tr>
+            <th class="border px-2 py-1 text-left">#</th>
+            <th class="border px-2 py-1 text-left">Имя</th>
+            <th class="border px-2 py-1 text-left">Статус</th>
+            <th class="border px-2 py-1 text-left">Удалить</th>
+          </tr>
+        </thead>
+        <tbody id="userTableBody"></tbody>
+      </table>
+    </div>
 
-    <h3>Добавить нового</h3>
-    <form id="addForm">
-        <input name="username" placeholder="Имя" required>
-        <button>Добавить</button>
+    <h3 class="text-xl font-semibold mt-8 mb-2">Добавить нового</h3>
+    <form id="addForm" class="flex gap-2">
+      <input name="username" placeholder="Имя" required class="border px-3 py-1 rounded w-full" />
+      <button class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-1 rounded">Добавить</button>
     </form>
+  </div>
 
-    <script>
-        const API = 'https://n8n-pashavin.ru/webhook/authors'; // 👈 замени на свой
-        const AUTH = 'Basic ' + btoa('pashavincontentfabric:FW8-5ca-CEZ-8fa');        // 👈 логин:пароль
+  <script>
+    const API = 'https://n8n-pashavin.ru/webhook/authors';
+    const AUTH = 'Basic ' + btoa('pashavincontentfabric:FW8-5ca-CEZ-8fa');
 
-        const toChecked = s => s === 'on';
-        const toStatus = c => c ? 'on' : 'off';
-        let usersCache = [];
+    const toChecked = s => s === 'on';
+    const toStatus = c => c ? 'on' : 'off';
+    let usersCache = [];
 
-        function req(method, body) {
-            return fetch(API, {
-                method,
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': AUTH
-                },
-                body: body ? JSON.stringify(body) : undefined
-            });
-        }
+    function req(method, body) {
+      return fetch(API, {
+        method,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': AUTH
+        },
+        body: body ? JSON.stringify(body) : undefined
+      });
+    }
 
-        async function load() {
-            usersCache = await req('GET').then(r => r.json());
-            render();
-        }
+    async function load() {
+      usersCache = await req('GET').then(r => r.json());
+      render();
+    }
 
-        function render() {
-            const filter = document.getElementById('filterSel').value;
-            const list = document.getElementById('list');
-            list.innerHTML = '';
-            usersCache
-                .filter(u => filter === 'all' || u.status === filter)
-                .forEach(u => {
-                    const li = document.createElement('li');
-                    li.innerHTML = `${u.username} <input type="checkbox" ${toChecked(u.status) ? 'checked' : ''}>`;
-                    li.querySelector('input').onchange = e =>
-                        req('PATCH', { id: u.id, status: toStatus(e.target.checked) }).then(load);
-                    list.appendChild(li);
-                });
-        }
+    function render() {
+      const filter = document.getElementById('filterSel').value;
+      const tableBody = document.getElementById('userTableBody');
+      tableBody.innerHTML = '';
 
-        document.getElementById('addForm').onsubmit = async e => {
-            e.preventDefault();
-            const username = e.target.username.value.trim();
-            if (!username) return;
-            await req('POST', { username });
-            e.target.reset();
-            load();
+      const usersSorted = [...usersCache]
+        .filter(u => filter === 'all' || u.status === filter)
+        .sort((a, b) => a.username.localeCompare(b.username, 'ru'));
+
+      usersSorted.forEach((u, index) => {
+        const tr = document.createElement('tr');
+        tr.className = u.status === 'on' ? 'bg-green-50' : 'bg-pink-50';
+
+        tr.innerHTML = `
+          <td class="border px-2 py-1">${index + 1}</td>
+          <td class="border px-2 py-1">${u.username}</td>
+          <td class="border px-2 py-1">
+            <input type="checkbox" ${toChecked(u.status) ? 'checked' : ''} class="scale-125">
+          </td>
+          <td class="border px-2 py-1">
+            <button class="text-red-600 hover:underline text-sm">Удалить</button>
+          </td>
+        `;
+
+        const checkbox = tr.querySelector('input[type="checkbox"]');
+        checkbox.onchange = e =>
+          req('PATCH', { id: u.id, status: toStatus(e.target.checked) }).then(load);
+
+        const deleteBtn = tr.querySelector('button');
+        deleteBtn.onclick = () => {
+          if (confirm(`Удалить пользователя ${u.username}?`)) {
+            req('PATCH', { delete: true, id: u.id }).then(load);
+          }
         };
 
-        document.getElementById('filterSel').onchange = render;
+        tableBody.appendChild(tr);
+      });
+    }
 
-        document.getElementById('onAll').onclick = () => massUpdate('on', 'Включить всех?');
-        document.getElementById('offAll').onclick = () => massUpdate('off', 'Выключить всех?');
+    document.getElementById('addForm').onsubmit = async e => {
+      e.preventDefault();
+      const username = e.target.username.value.trim();
+      if (!username) return;
+      await req('POST', { username });
+      e.target.reset();
+      load();
+    };
 
-        async function massUpdate(state, msg) {
-            if (!confirm(msg)) return;
-            await req('PATCH', { all: true, status: state });
-            load();
-        }
+    document.getElementById('filterSel').onchange = render;
+    document.getElementById('onAll').onclick = () => massUpdate('on', 'Включить всех?');
+    document.getElementById('offAll').onclick = () => massUpdate('off', 'Выключить всех?');
 
-        load();
-    </script>
+    async function massUpdate(state, msg) {
+      if (!confirm(msg)) return;
+      await req('PATCH', { all: true, status: state });
+      load();
+    }
+
+    load();
+  </script>
 </body>
 
 </html>
