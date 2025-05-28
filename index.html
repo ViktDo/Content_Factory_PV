@@ -6,6 +6,21 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Статусы пользователей</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    input[type=number]::-webkit-outer-spin-button,
+    input[type=number]::-webkit-inner-spin-button {
+      -webkit-appearance: none;
+      margin: 0;
+    }
+    input[type=number] {
+      -moz-appearance: textfield;
+    }
+    .subs-input {
+      width: auto;
+      min-width: 4ch;
+      text-align: right;
+    }
+  </style>
 </head>
 
 <body class="bg-gray-50 text-gray-900">
@@ -106,6 +121,12 @@
       showLoading(false);
     }
 
+    function formatSubs(val) {
+      if (val >= 1_000_000) return (val / 1_000_000).toFixed(1).replace(/\.0$/, '') + 'М';
+      if (val >= 100_000) return Math.floor(val / 1_000) + 'К';
+      return val;
+    }
+
     function render() {
       const filter = document.getElementById('filterSel').value;
       const tableBody = document.getElementById('userTableBody');
@@ -135,7 +156,9 @@
         const tdIndex = `<td class="border px-2 py-0.5">${index + 1}</td>`;
         const tdName = `<td class="border px-2 py-0.5">${u.username}</td>`;
         const tdStatus = `<td class="border px-2 py-0.5"><label class="flex items-center gap-2"><input type="checkbox" ${toChecked(u.status) ? 'checked' : ''} class="scale-125"></label></td>`;
-        const tdSubs = `<td class="border px-2 py-0.5"><input type="number" value="${u.subscribers || 0}" class="border rounded px-2 py-1 w-20"></td>`;
+        const tdSubs = `<td class="border px-2 py-0.5">
+          <input type="text" value="${formatSubs(u.subscribers || 0)}" class="subs-input border rounded px-2 py-1" inputmode="numeric" pattern="[0-9]*">
+        </td>`;
         const tdDelete = `<td class="border px-2 py-0.5"><button class="text-red-600 hover:bg-red-100 rounded px-2 py-0.5">🗑</button></td>`;
 
         tr.innerHTML = tdIndex + tdName + tdStatus + tdSubs + tdDelete;
@@ -144,9 +167,10 @@
         checkbox.onchange = e =>
           req('PATCH', { id: u.id, status: toStatus(e.target.checked) }).then(load);
 
-        const subsInput = tr.querySelector('input[type="number"]');
-        subsInput.onchange = e => {
-          const val = parseInt(e.target.value) || 0;
+        const subsInput = tr.querySelector('input[type="text"]');
+        subsInput.onfocus = () => subsInput.value = u.subscribers || 0;
+        subsInput.onblur = e => {
+          const val = parseInt(e.target.value.replace(/[^\d]/g, '')) || 0;
           req('PATCH', { id: u.id, subscribers: val }).then(load);
         };
 
