@@ -178,11 +178,13 @@
       req('PATCH', { id, status: toStatus(checked) }).then(load);
     }
 
-    function removeUser(id) {
-      if (confirm('Удалить пользователя?')) {
-        req('PATCH', { delete: true, id }).then(load);
-      }
-    }
+  function removeUser(id) {
+  const user = usersCache.find(u => u.id === id);
+  const name = user?.username || 'пользователь';
+  if (confirm(`Удалить пользователя «${name}»?`)) {
+    req('PATCH', { delete: true, id }).then(load);
+  }
+}
 
     function updateSubs(id, value) {
       req('PATCH', { id, subscribers: parseInt(value) || 0 });
